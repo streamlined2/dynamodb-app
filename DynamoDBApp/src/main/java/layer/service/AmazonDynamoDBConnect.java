@@ -8,12 +8,10 @@ import lombok.Getter;
 @Getter
 public class AmazonDynamoDBConnect {
 
-    private DynamoDBMapper dynamoDBMapper;
+	private final DynamoDBMapper dynamoDBMapper;
 
-    public AmazonDynamoDBConnect() {
-
-        final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
-
-        this.dynamoDBMapper = new DynamoDBMapper(client);
-    }
+	public AmazonDynamoDBConnect() {
+		AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
+		dynamoDBMapper = new DynamoDBMapper(client);
+	}
 }

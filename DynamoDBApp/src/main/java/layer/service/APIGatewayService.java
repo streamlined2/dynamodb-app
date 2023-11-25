@@ -4,6 +4,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 
 public interface APIGatewayService {
 
-    APIGatewayProxyResponseEvent getApiGatewayProxyResponseEvent(String output, int statusCode1);
+	APIGatewayProxyResponseEvent getApiGatewayProxyResponseEvent(String message, int statusCode);
 
 }

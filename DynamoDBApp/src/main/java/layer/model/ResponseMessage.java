@@ -1,21 +1,12 @@
 package layer.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
 
-import java.io.Serializable;
-
-@Getter
-@Setter
-@AllArgsConstructor
-@RequiredArgsConstructor
+@Data
 @Builder
-@ToString
-public class ResponseMessage implements Serializable {
+public class ResponseMessage {
 
-    private String message;
+	private String message;
+
 }

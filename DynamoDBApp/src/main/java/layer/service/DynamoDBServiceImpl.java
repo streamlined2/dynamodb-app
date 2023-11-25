@@ -68,8 +68,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 	@Override
 	public String findUser(Map<String, String> pathParameters) {
 
-		User user = new User();
-		user.setEmail(pathParameters.get(TABLE_PARTITION_KEY));
+		User user = User.builder().email(pathParameters.get(TABLE_PARTITION_KEY)).build();
 
 		User existingUser = dynamoDBMapper.load(User.class, user.getEmail());
 		if (existingUser != null) {
@@ -102,8 +101,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 	@Override
 	public String deleteUser(Map<String, String> pathParameters) {
 
-		User userToDelete = new User();
-		userToDelete.setEmail(pathParameters.get(TABLE_PARTITION_KEY));
+		User userToDelete = User.builder().email(pathParameters.get(TABLE_PARTITION_KEY)).build();
 
 		User existingUser = dynamoDBMapper.load(User.class, userToDelete.getEmail());
 		if (existingUser != null) {
@@ -138,39 +136,6 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 			}
 		}
 		return getNotFilteredUsersList(queryParameters);
-	}
-
-	private static void updateUsersNotNullAttributes(User existingUser, User inputUser) {
-		if (inputUser.getCountry() != null) {
-			existingUser.setLocation(inputUser.getCountry());
-		}
-		if (inputUser.getName() != null) {
-			existingUser.setName(inputUser.getName());
-		}
-		if (inputUser.getLocation() != null) {
-			existingUser.setLocation(inputUser.getLocation());
-		}
-		if (inputUser.getBirthday() != null) {
-			existingUser.setBirthday(inputUser.getBirthday());
-		}
-		if (inputUser.getRegistration() != null) {
-			existingUser.setRegistration(inputUser.getRegistration());
-		}
-		if (inputUser.getAvatar() != null) {
-			existingUser.setAvatar(inputUser.getAvatar());
-		}
-		if (inputUser.getAbout() != null) {
-			existingUser.setAbout(inputUser.getAbout());
-		}
-		if (inputUser.getInterests() != null) {
-			existingUser.setInterests(inputUser.getInterests());
-		}
-		if (inputUser.getSocialMedia() != null) {
-			existingUser.setSocialMedia(inputUser.getSocialMedia());
-		}
-		if (inputUser.getPrivacy() != null) {
-			existingUser.setPrivacy(inputUser.getPrivacy());
-		}
 	}
 
 	private RequestBody extractRequestBodyParameters(String inputBody) {

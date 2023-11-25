@@ -10,6 +10,6 @@ public class UpdateUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return dynamoDBService.updateUser(requestEvent.getPathParameters(), requestEvent.getBody());
+		return getDynamoDBService().updateUser(requestEvent.getPathParameters(), requestEvent.getBody());
 	}
 }

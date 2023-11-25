@@ -10,7 +10,7 @@ public class GetUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return dynamoDBService.findUser(requestEvent.getPathParameters());
+		return getDynamoDBService().findUser(requestEvent.getPathParameters());
 	}
 
 }

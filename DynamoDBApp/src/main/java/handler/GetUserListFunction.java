@@ -10,7 +10,7 @@ public class GetUserListFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return dynamoDBService.getUsersListResponse(requestEvent.getQueryStringParameters());
+		return getDynamoDBService().getUsersListResponse(requestEvent.getQueryStringParameters());
 	}
 
 }

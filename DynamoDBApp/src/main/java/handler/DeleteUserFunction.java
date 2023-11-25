@@ -10,7 +10,7 @@ public class DeleteUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return dynamoDBService.deleteUser(requestEvent.getPathParameters());
+		return getDynamoDBService().deleteUser(requestEvent.getPathParameters());
 	}
 
 }

@@ -10,7 +10,7 @@ public class CreateUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return dynamoDBService.createUser(requestEvent.getBody());
+		return getDynamoDBService().createUser(requestEvent.getBody());
 	}
 
 }

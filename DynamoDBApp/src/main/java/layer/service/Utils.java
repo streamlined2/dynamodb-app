@@ -1,6 +1,8 @@
 package layer.service;
 
 import java.util.Calendar;
+import java.util.Optional;
+
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -9,11 +11,11 @@ public class Utils {
 	private final int MIN_AGE = 0;
 	private final int MAX_AGE = 150;
 
-	Integer getIntegerValue(String value) {
+	Optional<Integer> getIntegerValue(String value) {
 		try {
-			return Integer.valueOf(value);
+			return Optional.of(Integer.valueOf(value));
 		} catch (NumberFormatException e) {
-			return null;// TODO
+			return Optional.empty();
 		}
 	}
 
@@ -40,13 +42,15 @@ public class Utils {
 	String getSortKeyUpperValue(String sortKeyLowValue) {
 		long currentTimeInSeconds = getCurrentTimeInSeconds();
 		long yearDurationInSeconds = getYearDurationInSeconds();
-		return String.valueOf(currentTimeInSeconds - getLongValueOrDefault(sortKeyLowValue, MIN_AGE) * yearDurationInSeconds);
+		return String.valueOf(
+				currentTimeInSeconds - getLongValueOrDefault(sortKeyLowValue, MIN_AGE) * yearDurationInSeconds);
 	}
 
 	String getSortKeyLowValue(String sortKeyUpValue) {
 		long currentTimeInSeconds = getCurrentTimeInSeconds();
 		long yearDurationInSeconds = getYearDurationInSeconds();
-		return String.valueOf(currentTimeInSeconds - getLongValueOrDefault(sortKeyUpValue, MAX_AGE) * yearDurationInSeconds);
+		return String
+				.valueOf(currentTimeInSeconds - getLongValueOrDefault(sortKeyUpValue, MAX_AGE) * yearDurationInSeconds);
 	}
 
 }

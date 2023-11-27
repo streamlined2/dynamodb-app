@@ -1,18 +1,23 @@
 package layer.service;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
+
+import layer.model.RequestBody;
+import layer.model.User;
 
 public interface DynamoDBService {
 
-    String getUsersListResponse(Map<String, String> queryParameters);
+	List<User> getUserList(String lastKey, String limit);
 
-    String getUsersListByQueryResponse(Map<String, String> queryParameters, String inputBody);
+	List<User> getUserListByQuery(String rangeKey, String lastKey, String limit, Optional<RequestBody> parameters);
 
-    String createUser(String inputBody);
+	void createUser(User user);
 
-    String updateUser(Map<String, String> pathParameters, String inputBody);
+	void updateUser(String email, User user);
 
-    String deleteUser(Map<String, String> pathParameters);
+	void deleteUser(String email);
 
-    String findUser(Map<String, String> pathParameters);
+	Optional<User> findUser(String email);
+
 }

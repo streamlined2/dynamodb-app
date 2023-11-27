@@ -2,7 +2,10 @@ package handler;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
-public class CreateUserFunction extends GenericFunction {
+import layer.model.User;
+import layer.service.DynamoDBException;
+
+public class CreateUserFunction extends GenericUserFunction {
 
 	public CreateUserFunction() {
 		super(StatusCode.CREATED);
@@ -10,7 +13,13 @@ public class CreateUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return getDynamoDBService().createUser(requestEvent.getBody());
+		try {
+			User user = toUser(requestEvent.getBody());
+			getDynamoDBService().createUser(user);
+			return getJsonResponse("User created: " + user.getEmail());
+		} catch (DynamoDBException e) {
+			return getJsonResponse(e.getMessage());
+		}
 	}
 
 }

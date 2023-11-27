@@ -2,7 +2,9 @@ package handler;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
-public class DeleteUserFunction extends GenericFunction {
+import layer.service.DynamoDBException;
+
+public class DeleteUserFunction extends GenericUserFunction {
 
 	public DeleteUserFunction() {
 		super(StatusCode.OK);
@@ -10,7 +12,13 @@ public class DeleteUserFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return getDynamoDBService().deleteUser(requestEvent.getPathParameters());
+		try {
+			String email = requestEvent.getPathParameters().get(EMAIL_KEY);
+			getDynamoDBService().deleteUser(email);
+			return getJsonResponse(String.format("User with email %s has been deleted", email));
+		} catch (DynamoDBException e) {
+			return getJsonResponse(e.getMessage());
+		}
 	}
 
 }

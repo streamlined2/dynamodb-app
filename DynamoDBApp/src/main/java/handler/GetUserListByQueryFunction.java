@@ -1,8 +1,15 @@
 package handler;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
-public class GetUserListByQueryFunction extends GenericFunction {
+import layer.model.RequestBody;
+import layer.model.User;
+
+public class GetUserListByQueryFunction extends GenericUserFunction {
 
 	public GetUserListByQueryFunction() {
 		super(StatusCode.OK);
@@ -10,8 +17,11 @@ public class GetUserListByQueryFunction extends GenericFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		return getDynamoDBService().getUsersListByQueryResponse(requestEvent.getQueryStringParameters(),
-				requestEvent.getBody());
+		Optional<RequestBody> parameters = extractRequestBodyParameters(requestEvent.getBody());
+		Map<String, String> stringParameters = requestEvent.getQueryStringParameters();
+		List<User> userList = getDynamoDBService().getUserListByQuery(extractRangeKey(stringParameters),
+				extractHashKey(stringParameters), extractLimit(stringParameters), parameters);
+		return getGson().toJson(userList);
 	}
 
 }

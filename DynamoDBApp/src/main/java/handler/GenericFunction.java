@@ -35,7 +35,7 @@ public abstract class GenericFunction
 		private static final APIGatewayService INSTANCE = new APIGatewayServiceImpl();
 	}
 
-	public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
+	public final APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
 		try {
 			String message = doAction(requestEvent);
 			return getAPIGatewayService().getApiGatewayProxyResponseEvent(message, successCode.getCode());

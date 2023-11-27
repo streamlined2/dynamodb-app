@@ -1,5 +1,7 @@
 package layer.service;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
@@ -8,16 +10,19 @@ import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.datamodeling.ScanResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+
 import layer.model.RequestBody;
 import layer.model.ResponseMessage;
 import layer.model.User;
-import static layer.service.DynamoDBServiceUtils.getIntegerValue;
+import static layer.service.Utils.getIntegerValue;
 
 import static java.util.Map.ofEntries;
 import static java.util.Map.entry;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DynamoDBServiceImpl implements DynamoDBService {
 
@@ -39,42 +44,47 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 	private static final String NAME_BODY_PARAMETER = "name";
 	private static final String LOCATION_BODY_PARAMETER = "location";
 	private static final String BIRTHDAY_BODY_PARAMETER = "birthday";
+	private static final String USER_WITH_EMAIL_NOT_FOUND = "User with email %s not found";
 
-	private DynamoDBMapper getDynamoDBMapper() {
-		return DynamoDBMapperHelper.INSTANCE;
-	}
+	private final Gson gson;
+	private final DynamoDBMapper dynamoDBMapper;
 
-	private static class DynamoDBMapperHelper {
-		private static final DynamoDBMapper INSTANCE = new AmazonDynamoDBConnect().getDynamoDBMapper();
+	public DynamoDBServiceImpl() {
+		gson = new Gson();
+		AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
+		dynamoDBMapper = new DynamoDBMapper(client);
 	}
 
 	@Override
 	public String createUser(String inputBody) {
 
-		User user = new Gson().fromJson(inputBody, User.class);
+		User user = gson.fromJson(inputBody, User.class);
 		user.setCountry(COUNTRY_VALUE);
 
-		User existingUser = getDynamoDBMapper().load(User.class, user.getEmail());
-		if (existingUser == null) {
-			if (DynamoDBServiceChecks.isValidSocialMedia(user.getSocialMedia())) {
-				getDynamoDBMapper().save(user);
-				return getJsonResponse("User created: " + user.getEmail());
-			}
-			return getJsonResponse("User with such social media links cannot be created");
+		User existingUser = dynamoDBMapper.load(User.class, user.getEmail());
+		if (existingUser != null) {
+			return getJsonResponse(String.format("User with email %s already exists", user.getEmail()));
 		}
-		return getJsonResponse("User with this email already exists");
+
+		Set<String> incorrectSocialMedia = Checks.getIncorrectSocialMedia(user.getSocialMedia());
+		if (!incorrectSocialMedia.isEmpty()) {
+			return getJsonResponse(String.format("User cannot be created: incorrect social media links %s",
+					incorrectSocialMedia.toString()));
+		}
+		dynamoDBMapper.save(user);
+		return getJsonResponse("User created: " + user.getEmail());
 	}
 
 	@Override
 	public String findUser(Map<String, String> pathParameters) {
 
-		User user = User.builder().email(pathParameters.get(EMAIL_KEY)).build();
+		String email = pathParameters.get(EMAIL_KEY);
 
-		User existingUser = getDynamoDBMapper().load(User.class, user.getEmail());
-		if (existingUser != null) {
-			return new Gson().toJson(existingUser);
+		User existingUser = dynamoDBMapper.load(User.class, email);
+		if (existingUser == null) {
+			return getJsonResponse(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
 		}
-		return getJsonResponse("User not found");
+		return gson.toJson(existingUser);
 	}
 
 	@Override
@@ -82,32 +92,36 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 
 		String email = pathParameters.get(EMAIL_KEY);
 
-		User user = new Gson().fromJson(inputBody, User.class);
+		User existingUser = dynamoDBMapper.load(User.class, email);
+		if (existingUser == null) {
+			return getJsonResponse(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
+		}
+
+		User user = gson.fromJson(inputBody, User.class);
 		user.setEmail(email);
 		user.setCountry(COUNTRY_VALUE);
 
-		User existingUser = getDynamoDBMapper().load(User.class, email);
-		if (existingUser != null) {
-			if (DynamoDBServiceChecks.isValidSocialMedia(user.getSocialMedia())) {
-				getDynamoDBMapper().save(user);
-				return getJsonResponse("User updated: " + email);
-			}
-			return getJsonResponse("User cannot be updated: incorrect social media links");
+		Set<String> incorrectSocialMedia = Checks.getIncorrectSocialMedia(user.getSocialMedia());
+		if (!incorrectSocialMedia.isEmpty()) {
+			return getJsonResponse(String.format("User cannot be updated: incorrect social media links %s",
+					incorrectSocialMedia.toString()));
 		}
-		return getJsonResponse("User with such email does not exist");
+
+		dynamoDBMapper.save(user);
+		return getJsonResponse("User updated: " + email);
 	}
 
 	@Override
 	public String deleteUser(Map<String, String> pathParameters) {
 
-		User userToDelete = User.builder().email(pathParameters.get(EMAIL_KEY)).build();
+		String email = pathParameters.get(EMAIL_KEY);
 
-		User existingUser = getDynamoDBMapper().load(User.class, userToDelete.getEmail());
-		if (existingUser != null) {
-			getDynamoDBMapper().delete(existingUser);
-			return getJsonResponse("User deleted: " + existingUser.getEmail());
+		User existingUser = dynamoDBMapper.load(User.class, email);
+		if (existingUser == null) {
+			return getJsonResponse(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
 		}
-		return getJsonResponse("User not found");
+		dynamoDBMapper.delete(existingUser);
+		return getJsonResponse(String.format("User with email %s deleted", email));
 	}
 
 	@Override
@@ -120,31 +134,29 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 		if (inputBody == null) {
 			return getNotFilteredUsersList(queryParameters);
 		}
-		RequestBody bodyParameters = extractRequestBodyParameters(inputBody);
-		if (bodyParameters == null) {
+		try {
+			RequestBody bodyParameters = extractRequestBodyParameters(inputBody);
+			if (Checks.isValidNameParameter(bodyParameters)) {
+				return getFilteredUsersList(queryParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
+						bodyParameters.getName());
+			}
+			if (Checks.isValidLocationParameter(bodyParameters)) {
+				return getFilteredUsersList(queryParameters, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
+						bodyParameters.getLocation());
+			}
+			if (Checks.isValidAgeParameter(bodyParameters)) {
+				return getFilteredUsersList(queryParameters, BIRTHDAY_BODY_PARAMETER,
+						bodyParameters.getAgeLimits().get(0), bodyParameters.getAgeLimits().get(1),
+						COUNTRY_BIRTHDAY_INDEX);
+			}
+			return getNotFilteredUsersList(queryParameters);
+		} catch (JsonSyntaxException e) {
 			return getNotFilteredUsersList(queryParameters);
 		}
-		if (DynamoDBServiceChecks.isValidNameParameter(bodyParameters)) {
-			return getFilteredUsersList(queryParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
-					bodyParameters.getName());
-		}
-		if (DynamoDBServiceChecks.isValidLocationParameter(bodyParameters)) {
-			return getFilteredUsersList(queryParameters, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
-					bodyParameters.getLocation());
-		}
-		if (DynamoDBServiceChecks.isValidAgeParameter(bodyParameters)) {
-			return getFilteredUsersList(queryParameters, BIRTHDAY_BODY_PARAMETER, bodyParameters.getAgeLimits().get(0),
-					bodyParameters.getAgeLimits().get(1), COUNTRY_BIRTHDAY_INDEX);
-		}
-		return getNotFilteredUsersList(queryParameters);
 	}
 
 	private RequestBody extractRequestBodyParameters(String inputBody) {
-		try {
-			return new Gson().fromJson(inputBody, RequestBody.class);
-		} catch (Exception e) {
-			return null;// TODO
-		}
+		return gson.fromJson(inputBody, RequestBody.class);
 	}
 
 	private String getNotFilteredUsersList(Map<String, String> queryParameters) {
@@ -172,8 +184,8 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 	}
 
 	private String getNotPaginatedNotFilteredUsersList() {
-		List<User> users = getDynamoDBMapper().scan(User.class, new DynamoDBScanExpression());
-		return new Gson().toJson(users);
+		List<User> users = dynamoDBMapper.scan(User.class, new DynamoDBScanExpression());
+		return gson.toJson(users);
 	}
 
 	private String getPaginatedNotFilteredUsersList(Map<String, String> stringParameters) {
@@ -185,11 +197,11 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression().withConsistentRead(false)
 				.withLimit(getIntegerValue(extractLimit(stringParameters))).withExclusiveStartKey(startKey);
 
-		ScanResultPage<User> scanResultPage = getDynamoDBMapper().scanPage(User.class, scanExpression);
+		ScanResultPage<User> scanResultPage = dynamoDBMapper.scanPage(User.class, scanExpression);
 
 		List<User> users = scanResultPage.getResults();
 
-		return new Gson().toJson(users);
+		return gson.toJson(users);
 	}
 
 	private String getNotPaginatedFilteredUsersList(String indexName, String sortKeyName, String sortKeyValue) {
@@ -211,17 +223,17 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues);
 
-		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
 		List<User> users = queryResult.getResults();
 
-		return new Gson().toJson(users);
+		return gson.toJson(users);
 	}
 
 	private String getNotPaginatedFilteredUsersList(String indexName, String sortKeyName, String sortKeyLowValue,
 			String sortKeyUpValue) {
 
-		String sortKeyLowValueStr = DynamoDBServiceUtils.getSortKeyLowValue(sortKeyUpValue);
-		String sortKeyUpValueStr = DynamoDBServiceUtils.getSortKeyUpperValue(sortKeyLowValue);
+		String sortKeyLowValueStr = Utils.getSortKeyLowValue(sortKeyUpValue);
+		String sortKeyUpValueStr = Utils.getSortKeyUpperValue(sortKeyLowValue);
 
 		String partitionKeyLabel = "#" + INDEX_PARTITION_KEY;// TODO
 		String sortKeyLabel = "#" + sortKeyName;// TODO
@@ -242,10 +254,10 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues);
 
-		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
 		List<User> users = queryResult.getResults();
 
-		return new Gson().toJson(users);
+		return gson.toJson(users);
 	}
 
 	private String getPaginatedFilteredUsersList(Map<String, String> stringParameters, String indexName,
@@ -272,17 +284,17 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 				.withExpressionAttributeValues(expressionAttributeValues)
 				.withLimit(getIntegerValue(extractLimit(stringParameters))).withExclusiveStartKey(startKey);
 
-		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
 		List<User> users = queryResult.getResults();
 
-		return new Gson().toJson(users);
+		return gson.toJson(users);
 	}
 
 	private String getPaginatedFilteredUsersList(Map<String, String> stringParameters, String indexName,
 			String sortKeyName, String sortKeyLowValue, String sortKeyUpValue) {
 
-		String sortKeyLowValueStr = DynamoDBServiceUtils.getSortKeyLowValue(sortKeyUpValue);
-		String sortKeyUpValueStr = DynamoDBServiceUtils.getSortKeyUpperValue(sortKeyLowValue);
+		String sortKeyLowValueStr = Utils.getSortKeyLowValue(sortKeyUpValue);
+		String sortKeyUpValueStr = Utils.getSortKeyUpperValue(sortKeyLowValue);
 
 		Map<String, AttributeValue> startKey = getIndexNumericStartKeyMap(sortKeyName, extractHashKey(stringParameters),
 				extractRangeKey(stringParameters));
@@ -305,17 +317,17 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 				.withConsistentRead(false).withKeyConditionExpression(conditionExpression)
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues)
-				.withLimit(DynamoDBServiceUtils.getIntegerValue(extractLimit(stringParameters)))
+				.withLimit(Utils.getIntegerValue(extractLimit(stringParameters)))
 				.withExclusiveStartKey(startKey);
 
-		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
 		List<User> users = queryResult.getResults();
 
-		return new Gson().toJson(users);
+		return gson.toJson(users);
 	}
 
 	private static Map<String, AttributeValue> getTableStartKeyMap(String lastHashKey) {
-		if (DynamoDBServiceChecks.isValidTableLastHashKey(lastHashKey)) {
+		if (Checks.isValidTableLastHashKey(lastHashKey)) {
 			return Map.of(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey));
 		}
 		return null;// TODO
@@ -323,7 +335,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 
 	private static Map<String, AttributeValue> getIndexStringStartKeyMap(String sortKeyName, String lastHashKey,
 			String lastRangeKey) {
-		if (DynamoDBServiceChecks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
+		if (Checks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
 			return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey)),
 					entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
 					entry(sortKeyName, new AttributeValue().withS(lastRangeKey)));
@@ -333,7 +345,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 
 	private static Map<String, AttributeValue> getIndexNumericStartKeyMap(String sortKeyName, String lastHashKey,
 			String lastRangeKey) {
-		if (DynamoDBServiceChecks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
+		if (Checks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
 			return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey)),
 					entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
 					entry(sortKeyName, new AttributeValue().withN(lastRangeKey)));
@@ -372,11 +384,11 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 		if (limitStr == null) {
 			return false;
 		}
-		return DynamoDBServiceChecks.isValidLimit(DynamoDBServiceUtils.getIntegerValue(limitStr));
+		return Checks.isValidLimit(Utils.getIntegerValue(limitStr));
 	}
 
-	private static String getJsonResponse(String message) {
-		return new Gson().toJson(ResponseMessage.builder().message(message).build());
+	private String getJsonResponse(String message) {
+		return gson.toJson(ResponseMessage.builder().message(message).build());
 	}
 
 }

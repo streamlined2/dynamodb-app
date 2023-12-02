@@ -1,7 +1,8 @@
-package handler;
+package handler.user;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
+import handler.StatusCode;
 import layer.service.DynamoDBException;
 
 public class UpdateUserFunction extends GenericUserFunction {

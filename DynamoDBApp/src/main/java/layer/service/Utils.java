@@ -11,7 +11,7 @@ public class Utils {
 	private final int MIN_AGE = 0;
 	private final int MAX_AGE = 150;
 
-	Optional<Integer> getIntegerValue(String value) {
+	public Optional<Integer> getIntegerValue(String value) {
 		try {
 			return Optional.of(Integer.valueOf(value));
 		} catch (NumberFormatException e) {
@@ -19,7 +19,7 @@ public class Utils {
 		}
 	}
 
-	long getLongValueOrDefault(String value, long defaultValue) {
+	public long getLongValueOrDefault(String value, long defaultValue) {
 		try {
 			return Long.valueOf(value);
 		} catch (NumberFormatException e) {
@@ -27,7 +27,7 @@ public class Utils {
 		}
 	}
 
-	long getYearDurationInSeconds() {
+	public long getYearDurationInSeconds() {
 		Calendar cal = Calendar.getInstance();
 		long currentTimestamp = cal.getTimeInMillis() / 1000;
 		cal.add(Calendar.YEAR, 1);
@@ -35,18 +35,18 @@ public class Utils {
 		return nextYearTimestamp - currentTimestamp;
 	}
 
-	long getCurrentTimeInSeconds() {
+	public long getCurrentTimeInSeconds() {
 		return Calendar.getInstance().getTimeInMillis() / 1000;
 	}
 
-	String getSortKeyUpperValue(String sortKeyLowValue) {
+	public String getSortKeyUpperValue(String sortKeyLowValue) {
 		long currentTimeInSeconds = getCurrentTimeInSeconds();
 		long yearDurationInSeconds = getYearDurationInSeconds();
 		return String.valueOf(
 				currentTimeInSeconds - getLongValueOrDefault(sortKeyLowValue, MIN_AGE) * yearDurationInSeconds);
 	}
 
-	String getSortKeyLowValue(String sortKeyUpValue) {
+	public String getSortKeyLowValue(String sortKeyUpValue) {
 		long currentTimeInSeconds = getCurrentTimeInSeconds();
 		long yearDurationInSeconds = getYearDurationInSeconds();
 		return String

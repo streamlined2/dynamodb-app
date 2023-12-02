@@ -1,12 +1,12 @@
-package layer.service;
+package layer.service.user;
 
 import java.util.List;
 import java.util.Optional;
 
-import layer.model.RequestBody;
-import layer.model.User;
+import layer.model.user.RequestBody;
+import layer.model.user.User;
 
-public interface DynamoDBService {
+public interface UserService {
 
 	List<User> getUserList(String lastKey, String limit);
 

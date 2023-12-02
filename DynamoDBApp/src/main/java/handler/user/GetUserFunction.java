@@ -1,10 +1,11 @@
-package handler;
+package handler.user;
 
 import java.util.Optional;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
-import layer.model.User;
+import handler.StatusCode;
+import layer.model.user.User;
 
 public class GetUserFunction extends GenericUserFunction {
 
@@ -16,7 +17,7 @@ public class GetUserFunction extends GenericUserFunction {
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
 		String email = requestEvent.getPathParameters().get(EMAIL_KEY);
 		Optional<User> user = getDynamoDBService().findUser(email);
-		return user.map(this::toJson).orElse(getJsonResponse(String.format(USER_WITH_EMAIL_NOT_FOUND, email)));
+		return user.map(this::toJson).orElse(getJsonResponse(String.format(USER_WITH_EMAIL_NOT_FOUND_MESSAGE, email)));
 	}
 
 }

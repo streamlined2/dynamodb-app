@@ -1,4 +1,4 @@
-package layer.service;
+package layer.service.user;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -10,9 +10,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.JsonSyntaxException;
 
-import layer.model.RequestBody;
-import layer.model.User;
-import static layer.service.Utils.getIntegerValue;
+import layer.model.user.RequestBody;
+import layer.model.user.User;
+import layer.service.Checks;
+import layer.service.DynamoDBException;
+import layer.service.Utils;
 
 import static java.util.Map.ofEntries;
 import static java.util.Map.entry;
@@ -22,7 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class DynamoDBServiceImpl implements DynamoDBService {
+public class DynamoDBUserServiceImpl implements UserService {
 
 	private static final String SORT_KEY_UP_ALIAS = "sortUpAlias";
 	private static final String SORT_KEY_LOW_ALIAS = "sortLowAlias";
@@ -43,7 +45,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 
 	private final DynamoDBMapper dynamoDBMapper;
 
-	public DynamoDBServiceImpl() {
+	public DynamoDBUserServiceImpl() {
 		AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
 		dynamoDBMapper = new DynamoDBMapper(client);
 	}
@@ -148,7 +150,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 	private List<User> getPaginatedNotFilteredUsersList(String lastKey, String limit) {
 		Map<String, AttributeValue> startKey = getTableStartKeyMap(lastKey);
 		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression().withConsistentRead(false)
-				.withLimit(getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
+				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
 		return dynamoDBMapper.scanPage(User.class, scanExpression).getResults();
 	}
 
@@ -224,7 +226,7 @@ public class DynamoDBServiceImpl implements DynamoDBService {
 				.withConsistentRead(false).withKeyConditionExpression(conditionExpression)
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues)
-				.withLimit(getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
+				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
 
 		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
 		return queryResult.getResults();

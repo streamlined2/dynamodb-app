@@ -1,4 +1,4 @@
-package layer.model;
+package layer.model.user;
 
 import lombok.Builder;
 import lombok.Data;

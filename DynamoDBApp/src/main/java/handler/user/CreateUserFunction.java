@@ -1,8 +1,9 @@
-package handler;
+package handler.user;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
-import layer.model.User;
+import handler.StatusCode;
+import layer.model.user.User;
 import layer.service.DynamoDBException;
 
 public class CreateUserFunction extends GenericUserFunction {

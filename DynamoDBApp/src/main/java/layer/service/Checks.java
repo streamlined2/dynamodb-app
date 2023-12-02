@@ -60,6 +60,13 @@ public class Checks {
 		return !lastHashKey.isBlank() && !lastRangeKey.isBlank();
 	}
 
+	public boolean hasValidLimit(String limit) {
+		if (limit == null || limit.isBlank()) {
+			return false;
+		}
+		return isValidLimit(Utils.getIntegerValue(limit));
+	}
+
 	public boolean isValidLimit(Optional<Integer> limit) {
 		return limit.map(value -> value.intValue() > 0).orElse(false);
 	}

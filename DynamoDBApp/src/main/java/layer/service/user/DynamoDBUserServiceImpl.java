@@ -1,11 +1,6 @@
 package layer.service.user;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.JsonSyntaxException;
@@ -14,6 +9,7 @@ import layer.model.user.RequestBody;
 import layer.model.user.User;
 import layer.service.Checks;
 import layer.service.DynamoDBException;
+import layer.service.GenericDynamoDBServiceImpl;
 import layer.service.Utils;
 
 import static java.util.Map.ofEntries;
@@ -24,7 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class DynamoDBUserServiceImpl implements UserService {
+public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> implements UserService {
 
 	private static final String SORT_KEY_UP_ALIAS = "sortUpAlias";
 	private static final String SORT_KEY_LOW_ALIAS = "sortLowAlias";
@@ -40,24 +36,16 @@ public class DynamoDBUserServiceImpl implements UserService {
 	private static final String NAME_BODY_PARAMETER = "name";
 	private static final String LOCATION_BODY_PARAMETER = "location";
 	private static final String BIRTHDAY_BODY_PARAMETER = "birthday";
-	private static final Integer MAX_LIMIT = Integer.valueOf(Integer.MAX_VALUE);
 	private static final String USER_WITH_EMAIL_NOT_FOUND = "User with email %s not found";
-
-	private final DynamoDBMapper dynamoDBMapper;
-
-	public DynamoDBUserServiceImpl() {
-		AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard().build();
-		dynamoDBMapper = new DynamoDBMapper(client);
-	}
 
 	@Override
 	public void createUser(User user) {
-		User existingUser = dynamoDBMapper.load(User.class, user.getEmail());
+		User existingUser = getDynamoDBMapper().load(User.class, user.getEmail());
 		if (existingUser != null) {
 			throw new DynamoDBException(String.format("User with email %s already exists", user.getEmail()));
 		}
 		checkSocialMedia(user, "User cannot be created: incorrect social media links %s");
-		dynamoDBMapper.save(user);
+		getDynamoDBMapper().save(user);
 	}
 
 	private void checkSocialMedia(User user, String message) {
@@ -69,32 +57,32 @@ public class DynamoDBUserServiceImpl implements UserService {
 
 	@Override
 	public Optional<User> findUser(String email) {
-		return Optional.ofNullable(dynamoDBMapper.load(User.class, email));
+		return Optional.ofNullable(getDynamoDBMapper().load(User.class, email));
 	}
 
 	@Override
 	public void updateUser(String email, User user) {
-		User existingUser = dynamoDBMapper.load(User.class, email);
+		User existingUser = getDynamoDBMapper().load(User.class, email);
 		if (existingUser == null) {
 			throw new DynamoDBException(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
 		}
 		checkSocialMedia(user, "User cannot be updated: incorrect social media links %s");
 		user.setEmail(email);
-		dynamoDBMapper.save(user);
+		getDynamoDBMapper().save(user);
 	}
 
 	@Override
 	public void deleteUser(String email) {
-		User existingUser = dynamoDBMapper.load(User.class, email);
+		User existingUser = getDynamoDBMapper().load(User.class, email);
 		if (existingUser == null) {
 			throw new DynamoDBException(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
 		}
-		dynamoDBMapper.delete(existingUser);
+		getDynamoDBMapper().delete(existingUser);
 	}
 
 	@Override
 	public List<User> getUserList(String lastKey, String limit) {
-		return getNotFilteredUsersList(lastKey, limit);
+		return getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, lastKey, limit);
 	}
 
 	@Override
@@ -113,22 +101,15 @@ public class DynamoDBUserServiceImpl implements UserService {
 				return getFilteredUsersList(rangeKey, lastKey, limit, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
 						parameters.get().getAgeLimits().get(0), parameters.get().getAgeLimits().get(1));
 			}
-			return getNotFilteredUsersList(lastKey, limit);
+			return getUserList(lastKey, limit);
 		} catch (JsonSyntaxException e) {
-			return getNotFilteredUsersList(lastKey, limit);
+			return getUserList(lastKey, limit);
 		}
-	}
-
-	private List<User> getNotFilteredUsersList(String lastKey, String limit) {
-		if (hasValidLimit(limit)) {
-			return getPaginatedNotFilteredUsersList(lastKey, limit);
-		}
-		return getNotPaginatedNotFilteredUsersList();
 	}
 
 	private List<User> getFilteredUsersList(String rangeKey, String lastKey, String limit, String indexName,
 			String queryParameter, String parameterValue) {
-		if (hasValidLimit(limit)) {
+		if (Checks.hasValidLimit(limit)) {
 			return getPaginatedFilteredUsersList(rangeKey, lastKey, limit, indexName, queryParameter, parameterValue);
 		}
 		return getNotPaginatedFilteredUsersList(indexName, queryParameter, parameterValue);
@@ -136,22 +117,11 @@ public class DynamoDBUserServiceImpl implements UserService {
 
 	private List<User> getFilteredUsersList(String rangeKey, String lastKey, String limit, String indexName,
 			String queryParameter, String parameterLowValue, String parameterUpValue) {
-		if (hasValidLimit(limit)) {
+		if (Checks.hasValidLimit(limit)) {
 			return getPaginatedFilteredUsersList(rangeKey, lastKey, limit, indexName, queryParameter, parameterLowValue,
 					parameterUpValue);
 		}
 		return getNotPaginatedFilteredUsersList(indexName, queryParameter, parameterLowValue, parameterUpValue);
-	}
-
-	private List<User> getNotPaginatedNotFilteredUsersList() {
-		return dynamoDBMapper.scan(User.class, new DynamoDBScanExpression());
-	}
-
-	private List<User> getPaginatedNotFilteredUsersList(String lastKey, String limit) {
-		Map<String, AttributeValue> startKey = getTableStartKeyMap(lastKey);
-		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression().withConsistentRead(false)
-				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
-		return dynamoDBMapper.scanPage(User.class, scanExpression).getResults();
 	}
 
 	private List<User> getNotPaginatedFilteredUsersList(String indexName, String sortKeyName, String sortKeyValue) {
@@ -172,7 +142,7 @@ public class DynamoDBUserServiceImpl implements UserService {
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues);
 
-		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
 		return queryResult.getResults();
 	}
 
@@ -201,7 +171,7 @@ public class DynamoDBUserServiceImpl implements UserService {
 				.withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues);
 
-		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
 		return queryResult.getResults();
 	}
 
@@ -228,7 +198,7 @@ public class DynamoDBUserServiceImpl implements UserService {
 				.withExpressionAttributeValues(expressionAttributeValues)
 				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
 
-		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
 		return queryResult.getResults();
 	}
 
@@ -260,15 +230,8 @@ public class DynamoDBUserServiceImpl implements UserService {
 				.withExpressionAttributeValues(expressionAttributeValues)
 				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
 
-		QueryResultPage<User> queryResult = dynamoDBMapper.queryPage(User.class, queryExpression);
+		QueryResultPage<User> queryResult = getDynamoDBMapper().queryPage(User.class, queryExpression);
 		return queryResult.getResults();
-	}
-
-	private static Map<String, AttributeValue> getTableStartKeyMap(String lastHashKey) {
-		if (Checks.isValidTableLastHashKey(lastHashKey)) {
-			return Map.of(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey));
-		}
-		return null;// TODO
 	}
 
 	private static Map<String, AttributeValue> getIndexStringStartKeyMap(String sortKeyName, String lastHashKey,
@@ -300,13 +263,6 @@ public class DynamoDBUserServiceImpl implements UserService {
 			String partitionKeyAlias, String sortKeyAlias) {
 		return ofEntries(entry(":" + partitionKeyAlias, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
 				entry(":" + sortKeyAlias, new AttributeValue().withS(sortKeyValue)));
-	}
-
-	private boolean hasValidLimit(String limit) {
-		if (limit == null || limit.isBlank()) {
-			return false;
-		}
-		return Checks.isValidLimit(Utils.getIntegerValue(limit));
 	}
 
 }

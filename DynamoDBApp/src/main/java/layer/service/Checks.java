@@ -2,7 +2,6 @@ package layer.service;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -14,8 +13,8 @@ public class Checks {
 
 	private final Set<String> SOCIAL_MEDIA_NAMES = Set.of("linkedin", "telegram", "skype", "instagram", "facebook");
 
-	public Set<String> getIncorrectSocialMedia(Map<String, String> socialMedia) {
-		Set<String> incorrectSocialMedia = new HashSet<>(socialMedia.keySet());
+	public Set<String> getIncorrectSocialMedia(Set<String> socialMedia) {
+		Set<String> incorrectSocialMedia = new HashSet<>(socialMedia);
 		incorrectSocialMedia.removeAll(SOCIAL_MEDIA_NAMES);
 		return incorrectSocialMedia;
 	}

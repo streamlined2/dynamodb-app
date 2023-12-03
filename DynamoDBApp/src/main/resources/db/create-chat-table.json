@@ -1,0 +1,32 @@
+{
+	"TableName": "it-marathon-v3-chat-db",
+	"KeySchema": [
+		{
+			"AttributeName": "name",
+			"KeyType": "HASH"
+		},
+		{
+			"AttributeName": "updated_time",
+			"KeyType": "RANGE"
+		}
+	],
+	"AttributeDefinitions": [
+		{
+			"AttributeName": "name",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "updated_time",
+			"AttributeType": "N"
+		},
+		{
+			"AttributeName": "user_emails",
+			"AttributeType": "B"
+		}
+	],
+	"BillingMode": "PROVISIONED",
+	"ProvisionedThroughput": {
+		"ReadCapacityUnits": 5,
+		"WriteCapacityUnits": 5
+	}
+}

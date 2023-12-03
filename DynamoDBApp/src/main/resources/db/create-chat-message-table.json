@@ -1,0 +1,48 @@
+{
+	"TableName": "it-marathon-v3-message-db",
+	"KeySchema": [
+		{
+			"KeyType": "HASH",
+			"AttributeName": "id"
+		},
+		{
+			"AttributeName": "created_time",
+			"KeyType": "RANGE"
+		}
+	],
+	"AttributeDefinitions": [
+		{
+			"AttributeName": "id",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "created_time",
+			"AttributeType": "N"
+		},
+		{
+			"AttributeName": "chat_name",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "sender_email",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "receiver_email",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "text",
+			"AttributeType": "S"
+		},
+		{
+			"AttributeName": "seen",
+			"AttributeType": "N"
+		}
+	],
+	"BillingMode": "PROVISIONED",
+	"ProvisionedThroughput": {
+		"ReadCapacityUnits": 5,
+		"WriteCapacityUnits": 5
+	}
+}

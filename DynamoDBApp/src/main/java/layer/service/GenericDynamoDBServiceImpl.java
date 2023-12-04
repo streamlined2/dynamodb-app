@@ -35,17 +35,13 @@ public abstract class GenericDynamoDBServiceImpl<T> {
 
 	protected List<T> getPaginatedNotFilteredEntityList(Class<T> entityClass, String partitionKey, String lastKey,
 			String limit) {
-		Map<String, AttributeValue> startKey = getTableStartKeyMap(partitionKey, lastKey);
 		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression().withConsistentRead(false)
-				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
-		return getDynamoDBMapper().scanPage(entityClass, scanExpression).getResults();
-	}
-
-	protected static Map<String, AttributeValue> getTableStartKeyMap(String partitionKey, String lastHashKey) {
-		if (Checks.isValidTableLastHashKey(lastHashKey)) {
-			return Map.of(partitionKey, new AttributeValue().withS(lastHashKey));
+				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT));
+		if (Checks.isValidTableLastHashKey(lastKey)) {
+			scanExpression = scanExpression
+					.withExclusiveStartKey(Map.of(partitionKey, new AttributeValue().withS(lastKey)));
 		}
-		return null;// TODO
+		return getDynamoDBMapper().scanPage(entityClass, scanExpression).getResults();
 	}
 
 	protected List<T> getNotPaginatedNotFilteredEntityList(Class<T> entityClass) {

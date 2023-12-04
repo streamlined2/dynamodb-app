@@ -140,13 +140,11 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 
 		Map<String, AttributeValue> expressionAttributeValues = getExpressionAttributeValuesMap(sortKeyValue,
 				PARTITION_KEY_ALIAS, SORT_KEY_ALIAS);
-
-		String conditionExpression = MessageFormat.format("{0} = :{1} and begins_with ({2}, :{3})", partitionKeyLabel,
-				PARTITION_KEY_ALIAS, sortKeyLabel, SORT_KEY_ALIAS);
-
 		Map<String, String> expressionAttributeNames = getExpressionAttributeNamesMap(sortKeyName, partitionKeyLabel,
 				sortKeyLabel);
 
+		String conditionExpression = MessageFormat.format("{0} = :{1} and begins_with ({2}, :{3})", partitionKeyLabel,
+				PARTITION_KEY_ALIAS, sortKeyLabel, SORT_KEY_ALIAS);
 		return new DynamoDBQueryExpression<User>().withIndexName(indexName).withConsistentRead(false)
 				.withKeyConditionExpression(conditionExpression).withExpressionAttributeNames(expressionAttributeNames)
 				.withExpressionAttributeValues(expressionAttributeValues);
@@ -157,7 +155,6 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
 				sortKeyName, sortKeyLowValue, sortKeyUpValue);
-
 		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
 	}
 
@@ -188,11 +185,20 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	private List<User> getPaginatedFilteredUserList(String rangeKey, String lastKey, String limit, String indexName,
 			String sortKeyName, String sortKeyValue) {
 
-		Map<String, AttributeValue> startKey = getIndexStringStartKeyMap(sortKeyName, lastKey, rangeKey);
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
-				sortKeyName, sortKeyValue).withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT))
-				.withExclusiveStartKey(startKey);
+				sortKeyName, sortKeyValue).withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT));
+		if (Checks.isValidIndexHashAndRangeKeys(lastKey, rangeKey)) {
+			queryExpression = queryExpression
+					.withExclusiveStartKey(getStartKeyWithStringRangeKey(lastKey, rangeKey, sortKeyName));
+		}
 		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
+	}
+
+	private Map<String, AttributeValue> getStartKeyWithStringRangeKey(String lastKey, String rangeKey,
+			String sortKeyName) {
+		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastKey)),
+				entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
+				entry(sortKeyName, new AttributeValue().withS(rangeKey)));
 	}
 
 	private List<User> getPaginatedFilteredUserList(String rangeKey, String lastKey, String limit, String indexName,
@@ -206,29 +212,20 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	private DynamoDBQueryExpression<User> getExpressionForPaginatedFilteredUserList(String rangeKey, String lastKey,
 			String limit, String indexName, String sortKeyName, String sortKeyLowValue, String sortKeyUpValue) {
 
-		Map<String, AttributeValue> startKey = getIndexNumericStartKeyMap(sortKeyName, lastKey, rangeKey);
-		return getExpressionForNonPaginatedFilteredUserList(indexName, sortKeyName, sortKeyLowValue, sortKeyUpValue)
-				.withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT)).withExclusiveStartKey(startKey);
+		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
+				sortKeyName, sortKeyLowValue, sortKeyUpValue).withLimit(Utils.getIntegerValue(limit).orElse(MAX_LIMIT));
+		if (Checks.isValidIndexHashAndRangeKeys(lastKey, rangeKey)) {
+			queryExpression = queryExpression
+					.withExclusiveStartKey(getStartKeyWithNumericRangeKey(lastKey, rangeKey, sortKeyName));
+		}
+		return queryExpression;
 	}
 
-	private static Map<String, AttributeValue> getIndexStringStartKeyMap(String sortKeyName, String lastHashKey,
-			String lastRangeKey) {
-		if (Checks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
-			return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey)),
-					entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
-					entry(sortKeyName, new AttributeValue().withS(lastRangeKey)));
-		}
-		return null;// TODO
-	}
-
-	private static Map<String, AttributeValue> getIndexNumericStartKeyMap(String sortKeyName, String lastHashKey,
-			String lastRangeKey) {
-		if (Checks.isValidIndexHashAndRangeKeys(lastHashKey, lastRangeKey)) {
-			return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastHashKey)),
-					entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
-					entry(sortKeyName, new AttributeValue().withN(lastRangeKey)));
-		}
-		return null;// TODO
+	private Map<String, AttributeValue> getStartKeyWithNumericRangeKey(String lastKey, String rangeKey,
+			String sortKeyName) {
+		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastKey)),
+				entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
+				entry(sortKeyName, new AttributeValue().withN(rangeKey)));
 	}
 
 	private static Map<String, String> getExpressionAttributeNamesMap(String sortKeyName, String partitionKeyLabel,

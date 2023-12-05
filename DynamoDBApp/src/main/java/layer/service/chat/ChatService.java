@@ -6,15 +6,15 @@ import java.util.Optional;
 import layer.model.chat.Chat;
 
 public interface ChatService {
-	
-	List<Chat> getChatList(String lastKey, String limit);
+
+	List<Chat> getChatList(Optional<String> lastKey, Optional<String> limit);
 
 	void createChat(Chat chat);
-	
+
 	void deleteChat(String name);
-	
+
 	void updateChat(String name, Chat chat);
-	
+
 	Optional<Chat> findChat(String name);
 
 }

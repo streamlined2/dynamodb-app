@@ -8,9 +8,10 @@ import layer.model.user.User;
 
 public interface UserService {
 
-	List<User> getUserList(String lastKey, String limit);
+	List<User> getUserList(Optional<String> lastKey, Optional<String> limit);
 
-	List<User> getUserListByQuery(String rangeKey, String lastKey, String limit, Optional<RequestBody> parameters);
+	List<User> getUserListByQuery(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
+			Optional<RequestBody> parameters);
 
 	void createUser(User user);
 

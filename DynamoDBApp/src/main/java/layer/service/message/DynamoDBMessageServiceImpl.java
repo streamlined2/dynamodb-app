@@ -13,7 +13,7 @@ public class DynamoDBMessageServiceImpl extends GenericDynamoDBServiceImpl<Messa
 	private static final String TABLE_PARTITION_KEY = "id";
 
 	@Override
-	public List<Message> getMessageList(String lastKey, String limit) {
+	public List<Message> getMessageList(Optional<String> lastKey, Optional<String> limit) {
 		return getNotFilteredEntityList(Message.class, TABLE_PARTITION_KEY, lastKey, limit);
 	}
 

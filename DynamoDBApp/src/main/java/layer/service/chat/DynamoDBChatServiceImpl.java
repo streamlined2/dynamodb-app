@@ -13,7 +13,7 @@ public class DynamoDBChatServiceImpl extends GenericDynamoDBServiceImpl<Chat> im
 	private static final String TABLE_PARTITION_KEY = "name";
 
 	@Override
-	public List<Chat> getChatList(String lastKey, String limit) {
+	public List<Chat> getChatList(Optional<String> lastKey, Optional<String> limit) {
 		return getNotFilteredEntityList(Chat.class, TABLE_PARTITION_KEY, lastKey, limit);
 	}
 

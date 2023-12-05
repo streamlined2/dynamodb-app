@@ -8,13 +8,14 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Utils {
 
+	private final Integer MAX_LIMIT = Integer.MAX_VALUE;
 	private final int MIN_AGE = 0;
 	private final int MAX_AGE = 150;
 
 	public Optional<Integer> getIntegerValue(String value) {
 		try {
 			return Optional.of(Integer.valueOf(value));
-		} catch (NumberFormatException e) {
+		} catch (NullPointerException | NumberFormatException e) {
 			return Optional.empty();
 		}
 	}
@@ -25,6 +26,10 @@ public class Utils {
 		} catch (NumberFormatException e) {
 			return defaultValue;
 		}
+	}
+
+	public Integer getLimit(Optional<String> limit) {
+		return limit.flatMap(Utils::getIntegerValue).orElse(MAX_LIMIT);
 	}
 
 	public long getYearDurationInSeconds() {

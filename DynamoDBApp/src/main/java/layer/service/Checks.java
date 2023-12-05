@@ -24,13 +24,8 @@ public class Checks {
 	}
 
 	public boolean isValidLowerUpperAgeLimits(List<String> ageLimits) {
-		String lowerAgeLimit = ageLimits.get(0);
-		String upperAgeLimit = ageLimits.get(1);
-		if (lowerAgeLimit == null || upperAgeLimit == null) {
-			return false;
-		}
-		Optional<Integer> lowerLimit = Utils.getIntegerValue(lowerAgeLimit);
-		Optional<Integer> upperLimit = Utils.getIntegerValue(upperAgeLimit);
+		Optional<Integer> lowerLimit = Utils.getIntegerValue(ageLimits.get(0));
+		Optional<Integer> upperLimit = Utils.getIntegerValue(ageLimits.get(1));
 		if (lowerLimit.isEmpty() || upperLimit.isEmpty()) {
 			return false;
 		}
@@ -45,29 +40,24 @@ public class Checks {
 		return parameters.map(RequestBody::getName).map(name -> !name.isBlank()).orElse(false);
 	}
 
-	public boolean isValidTableLastHashKey(String lastHashKey) {
-		if (lastHashKey == null) {
-			return false;
-		}
-		return !lastHashKey.isEmpty();
+	public boolean isValidTableLastHashKey(Optional<String> lastHashKey) {
+		return lastHashKey.map(hashKey -> !hashKey.isBlank()).orElse(false);
 	}
 
-	public boolean isValidIndexHashAndRangeKeys(String lastHashKey, String lastRangeKey) {
-		if (lastHashKey == null || lastRangeKey == null) {
-			return false;
-		}
-		return !lastHashKey.isBlank() && !lastRangeKey.isBlank();
+	public boolean isValidIndexHashAndRangeKeys(Optional<String> lastHashKey, Optional<String> lastRangeKey) {
+		return isValidKey(lastHashKey) && isValidKey(lastRangeKey);
 	}
 
-	public boolean hasValidLimit(String limit) {
-		if (limit == null || limit.isBlank()) {
-			return false;
-		}
-		return isValidLimit(Utils.getIntegerValue(limit));
+	public boolean isValidKey(Optional<String> lastHashKey) {
+		return lastHashKey.map(key -> !key.isBlank()).orElse(false);
 	}
 
-	public boolean isValidLimit(Optional<Integer> limit) {
-		return limit.map(value -> value.intValue() > 0).orElse(false);
+	public boolean hasValidLimit(Optional<String> limit) {
+		return limit.flatMap(Utils::getIntegerValue).map(Checks::isValidLimit).orElse(false);
+	}
+
+	public boolean isValidLimit(Integer limit) {
+		return limit.intValue() > 0;
 	}
 
 }

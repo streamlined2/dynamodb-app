@@ -1,6 +1,8 @@
 package handler;
 
 import java.util.Map;
+import java.util.Optional;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -54,16 +56,20 @@ public abstract class GenericFunction
 
 	protected abstract String doAction(APIGatewayProxyRequestEvent requestEvent);
 
-	protected String extractLimit(Map<String, String> queryParameters) {
-		return queryParameters.getOrDefault(LIMIT_QUERY_PARAMETER, null);// TODO
+	protected Optional<String> extractLimit(Map<String, String> queryParameters) {
+		return extractParameter(LIMIT_QUERY_PARAMETER, queryParameters);
 	}
 
-	protected String extractHashKey(Map<String, String> queryParameters) {
-		return queryParameters.getOrDefault(HASH_KEY_QUERY_PARAMETER, null);// TODO
+	protected Optional<String> extractHashKey(Map<String, String> queryParameters) {
+		return extractParameter(HASH_KEY_QUERY_PARAMETER, queryParameters);
 	}
 
-	protected String extractRangeKey(Map<String, String> queryParameters) {
-		return queryParameters.getOrDefault(RANGE_KEY_QUERY_PARAMETER, null);// TODO
+	protected Optional<String> extractRangeKey(Map<String, String> queryParameters) {
+		return extractParameter(RANGE_KEY_QUERY_PARAMETER, queryParameters);
+	}
+
+	private Optional<String> extractParameter(String parameterName, Map<String, String> queryParameters) {
+		return Optional.ofNullable(queryParameters.getOrDefault(parameterName, null));
 	}
 
 	protected String getJsonResponse(String message) {

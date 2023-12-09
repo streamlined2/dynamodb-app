@@ -6,7 +6,7 @@ import lombok.Value;
 
 @Value
 @Builder
-public class RequestBody {
+public class UserData {
 
 	private static final int MIN_AGE = 0;
 	private static final int MAX_AGE = 150;

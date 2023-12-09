@@ -3,15 +3,15 @@ package layer.service.user;
 import java.util.List;
 import java.util.Optional;
 
-import layer.model.user.RequestBody;
 import layer.model.user.User;
+import layer.model.user.UserData;
 
 public interface UserService {
 
 	List<User> getUserList(Optional<String> lastKey, Optional<String> limit);
 
 	List<User> getUserListByQuery(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
-			RequestBody parameters);
+			UserData userData);
 
 	void createUser(User user);
 

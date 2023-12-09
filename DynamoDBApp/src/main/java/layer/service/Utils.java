@@ -13,7 +13,7 @@ public class Utils {
 	public Optional<Integer> getIntegerValue(String value) {
 		try {
 			return Optional.of(Integer.valueOf(value));
-		} catch (NullPointerException | NumberFormatException e) {
+		} catch (NumberFormatException e) {
 			return Optional.empty();
 		}
 	}

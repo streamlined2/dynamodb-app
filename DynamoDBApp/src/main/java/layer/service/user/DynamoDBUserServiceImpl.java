@@ -4,8 +4,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.JsonSyntaxException;
 
-import layer.model.user.RequestBody;
 import layer.model.user.User;
+import layer.model.user.UserData;
 import layer.service.Checks;
 import layer.service.DynamoDBException;
 import layer.service.GenericDynamoDBServiceImpl;
@@ -90,19 +90,19 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 
 	@Override
 	public List<User> getUserListByQuery(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
-			RequestBody parameters) {
+			UserData userData) {
 		try {
-			if (parameters.isNameValid()) {
+			if (userData.isNameValid()) {
 				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
-						parameters.getName());
+						userData.getName());
 			}
-			if (parameters.isLocationValid()) {
+			if (userData.isLocationValid()) {
 				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
-						parameters.getLocation());
+						userData.getLocation());
 			}
-			if (parameters.isAgeValid()) {
+			if (userData.isAgeValid()) {
 				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
-						parameters.getMinAgeOrDefault(), parameters.getMaxAgeOrDefault());
+						userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault());
 			}
 			return getUserList(lastKey, limit);
 		} catch (JsonSyntaxException e) {

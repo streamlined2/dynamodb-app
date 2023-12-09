@@ -85,5 +85,5 @@ public abstract class GenericFunction<T>
 	protected String getJsonResponse(String message) {
 		return getGson().toJson(ResponseMessage.builder().message(message).build());
 	}
-
+	
 }

@@ -9,8 +9,6 @@ import lombok.experimental.UtilityClass;
 public class Utils {
 
 	private final Integer MAX_LIMIT = Integer.MAX_VALUE;
-	private final int MIN_AGE = 0;
-	private final int MAX_AGE = 150;
 
 	public Optional<Integer> getIntegerValue(String value) {
 		try {
@@ -20,42 +18,26 @@ public class Utils {
 		}
 	}
 
-	public long getLongValueOrDefault(String value, long defaultValue) {
-		try {
-			return Long.valueOf(value);
-		} catch (NumberFormatException e) {
-			return defaultValue;
-		}
-	}
-
 	public Integer getLimit(Optional<String> limit) {
 		return limit.flatMap(Utils::getIntegerValue).orElse(MAX_LIMIT);
 	}
 
-	public long getYearDurationInSeconds() {
+	public String getSortKeyValue(Number sortKeyValue) {
+		long currentTimeInSeconds = getCurrentTimeInSeconds();
+		long yearDurationInSeconds = getYearDurationInSeconds();
+		return String.valueOf(currentTimeInSeconds - sortKeyValue.longValue() * yearDurationInSeconds);
+	}
+
+	private long getCurrentTimeInSeconds() {
+		return Calendar.getInstance().getTimeInMillis() / 1000;
+	}
+
+	private long getYearDurationInSeconds() {
 		Calendar cal = Calendar.getInstance();
 		long currentTimestamp = cal.getTimeInMillis() / 1000;
 		cal.add(Calendar.YEAR, 1);
 		long nextYearTimestamp = cal.getTimeInMillis() / 1000;
 		return nextYearTimestamp - currentTimestamp;
-	}
-
-	public long getCurrentTimeInSeconds() {
-		return Calendar.getInstance().getTimeInMillis() / 1000;
-	}
-
-	public String getSortKeyUpperValue(String sortKeyLowValue) {
-		long currentTimeInSeconds = getCurrentTimeInSeconds();
-		long yearDurationInSeconds = getYearDurationInSeconds();
-		return String.valueOf(
-				currentTimeInSeconds - getLongValueOrDefault(sortKeyLowValue, MIN_AGE) * yearDurationInSeconds);
-	}
-
-	public String getSortKeyLowValue(String sortKeyUpValue) {
-		long currentTimeInSeconds = getCurrentTimeInSeconds();
-		long yearDurationInSeconds = getYearDurationInSeconds();
-		return String
-				.valueOf(currentTimeInSeconds - getLongValueOrDefault(sortKeyUpValue, MAX_AGE) * yearDurationInSeconds);
 	}
 
 }

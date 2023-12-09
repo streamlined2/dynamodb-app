@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
 import handler.StatusCode;
 import layer.model.user.User;
-import layer.service.DynamoDBException;
 
 public class CreateUserFunction extends GenericUserFunction {
 
@@ -14,13 +13,9 @@ public class CreateUserFunction extends GenericUserFunction {
 
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		try {
-			User user = toUser(requestEvent.getBody());
-			getDynamoDBService().createUser(user);
-			return getJsonResponse("User created: " + user.getEmail());
-		} catch (DynamoDBException e) {
-			return getJsonResponse(e.getMessage());
-		}
+		User user = toEntity(requestEvent.getBody());
+		getDynamoDBService().createUser(user);
+		return getJsonResponse("User created: " + user.getEmail());
 	}
 
 }

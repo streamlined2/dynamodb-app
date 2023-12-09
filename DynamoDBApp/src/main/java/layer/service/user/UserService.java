@@ -11,7 +11,7 @@ public interface UserService {
 	List<User> getUserList(Optional<String> lastKey, Optional<String> limit);
 
 	List<User> getUserListByQuery(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
-			Optional<RequestBody> parameters);
+			RequestBody parameters);
 
 	void createUser(User user);
 

@@ -8,12 +8,13 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import layer.model.ResponseMessage;
 import layer.service.APIGatewayService;
 import layer.service.APIGatewayServiceImpl;
 
-public abstract class GenericFunction
+public abstract class GenericFunction<T>
 		implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
 	private static final String LIMIT_QUERY_PARAMETER = "limit";
@@ -55,6 +56,15 @@ public abstract class GenericFunction
 	}
 
 	protected abstract String doAction(APIGatewayProxyRequestEvent requestEvent);
+
+	protected T toEntity(String inputBody) {
+		return getGson().fromJson(inputBody, new TypeToken<T>() {
+		});
+	}
+
+	protected String toJson(T entity) {
+		return getGson().toJson(entity);
+	}
 
 	protected Optional<String> extractLimit(Map<String, String> queryParameters) {
 		return extractParameter(LIMIT_QUERY_PARAMETER, queryParameters);

@@ -3,6 +3,7 @@ package layer.service.chat;
 import java.util.List;
 import java.util.Optional;
 
+import layer.model.ListParameters;
 import layer.model.chat.Chat;
 import layer.service.DynamoDBException;
 import layer.service.GenericDynamoDBServiceImpl;
@@ -13,8 +14,8 @@ public class DynamoDBChatServiceImpl extends GenericDynamoDBServiceImpl<Chat> im
 	private static final String TABLE_PARTITION_KEY = "name";
 
 	@Override
-	public List<Chat> getChatList(Optional<String> lastKey, Optional<String> limit) {
-		return getNotFilteredEntityList(Chat.class, TABLE_PARTITION_KEY, lastKey, limit);
+	public List<Chat> getChatList(ListParameters listParameters) {
+		return getNotFilteredEntityList(Chat.class, TABLE_PARTITION_KEY, listParameters);
 	}
 
 	@Override

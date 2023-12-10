@@ -17,8 +17,7 @@ public class GetChatListFunction extends GenericChatFunction {
 	@Override
 	protected String doAction(APIGatewayProxyRequestEvent requestEvent) {
 		Map<String, String> queryParameters = requestEvent.getQueryStringParameters();
-		List<Chat> chatList = getDynamoDBService().getChatList(extractHashKey(queryParameters),
-				extractLimit(queryParameters));
+		List<Chat> chatList = getDynamoDBService().getChatList(toListParameters(queryParameters));
 		return getGson().toJson(chatList);
 	}
 

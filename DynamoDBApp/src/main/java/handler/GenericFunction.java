@@ -10,6 +10,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import layer.model.ListParameters;
 import layer.model.ResponseMessage;
 import layer.service.APIGatewayService;
 import layer.service.APIGatewayServiceImpl;
@@ -66,8 +67,9 @@ public abstract class GenericFunction<T>
 		return getGson().toJson(entity);
 	}
 
-	protected Optional<String> extractLimit(Map<String, String> queryParameters) {
-		return extractParameter(LIMIT_QUERY_PARAMETER, queryParameters);
+	protected ListParameters toListParameters(Map<String, String> queryParameters) {
+		return ListParameters.builder().hashKey(extractHashKey(queryParameters))
+				.rangeKey(extractRangeKey(queryParameters)).limit(extractLimit(queryParameters)).build();
 	}
 
 	protected Optional<String> extractHashKey(Map<String, String> queryParameters) {
@@ -78,6 +80,10 @@ public abstract class GenericFunction<T>
 		return extractParameter(RANGE_KEY_QUERY_PARAMETER, queryParameters);
 	}
 
+	protected Optional<String> extractLimit(Map<String, String> queryParameters) {
+		return extractParameter(LIMIT_QUERY_PARAMETER, queryParameters);
+	}
+
 	private Optional<String> extractParameter(String parameterName, Map<String, String> queryParameters) {
 		return Optional.ofNullable(queryParameters.getOrDefault(parameterName, null));
 	}
@@ -85,5 +91,5 @@ public abstract class GenericFunction<T>
 	protected String getJsonResponse(String message) {
 		return getGson().toJson(ResponseMessage.builder().message(message).build());
 	}
-	
+
 }

@@ -17,8 +17,8 @@ public class GetUserListByQueryFunction extends GenericUserFunction {
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
 		RequestBody parameters = extractRequestBodyParameters(requestEvent.getBody());
 		Map<String, String> queryParameters = requestEvent.getQueryStringParameters();
-		List<User> userList = getDynamoDBService().getUserListByQuery(extractRangeKey(queryParameters),
-				extractHashKey(queryParameters), extractLimit(queryParameters), toUserData(parameters));
+		List<User> userList = getDynamoDBService().getUserListByQuery(toListParameters(queryParameters),
+				toUserData(parameters));
 		return getGson().toJson(userList);
 	}
 

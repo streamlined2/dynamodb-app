@@ -4,16 +4,17 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.JsonSyntaxException;
 
+import layer.model.ListParameters;
 import layer.model.user.User;
 import layer.model.user.UserData;
-import layer.service.Checks;
 import layer.service.DynamoDBException;
 import layer.service.GenericDynamoDBServiceImpl;
-import layer.service.Utils;
-
 import static java.util.Map.ofEntries;
 import static java.util.Map.entry;
 import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,6 +22,8 @@ import java.util.Set;
 
 public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> implements UserService {
 
+	private static final Set<String> SOCIAL_MEDIA_NAMES = Set.of("linkedin", "telegram", "skype", "instagram",
+			"facebook");
 	private static final String USER_WITH_EMAIL_NOT_FOUND = "User with email %s not found";
 
 	private static final String SORT_KEY_UP_ALIAS = "sortUpAlias";
@@ -52,10 +55,16 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	}
 
 	private void checkSocialMedia(User user, String message) {
-		Set<String> incorrectSocialMedia = Checks.getIncorrectSocialMedia(user.getSocialMedia());
+		Set<String> incorrectSocialMedia = getIncorrectSocialMedia(user.getSocialMedia());
 		if (!incorrectSocialMedia.isEmpty()) {
 			throw new DynamoDBException(String.format(message, incorrectSocialMedia.toString()));
 		}
+	}
+
+	private Set<String> getIncorrectSocialMedia(Set<String> socialMedia) {
+		Set<String> incorrectSocialMedia = new HashSet<>(socialMedia);
+		incorrectSocialMedia.removeAll(SOCIAL_MEDIA_NAMES);
+		return incorrectSocialMedia;
 	}
 
 	@Override
@@ -84,44 +93,42 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	}
 
 	@Override
-	public List<User> getUserList(Optional<String> lastKey, Optional<String> limit) {
-		return getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, lastKey, limit);
+	public List<User> getUserList(ListParameters listParameters) {
+		return getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, listParameters);
 	}
 
 	@Override
-	public List<User> getUserListByQuery(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
-			UserData userData) {
+	public List<User> getUserListByQuery(ListParameters listParameters, UserData userData) {
 		try {
 			if (userData.isNameValid()) {
-				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
-						userData.getName());
+				return getFilteredUserList(listParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER, userData.getName());
 			}
 			if (userData.isLocationValid()) {
-				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
+				return getFilteredUserList(listParameters, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
 						userData.getLocation());
 			}
 			if (userData.isAgeValid()) {
-				return getFilteredUserList(rangeKey, lastKey, limit, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
+				return getFilteredUserList(listParameters, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
 						userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault());
 			}
-			return getUserList(lastKey, limit);
+			return getUserList(listParameters);
 		} catch (JsonSyntaxException e) {
-			return getUserList(lastKey, limit);
+			return getUserList(listParameters);
 		}
 	}
 
-	private List<User> getFilteredUserList(Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit,
-			String indexName, String queryParameter, String parameterValue) {
-		if (Checks.hasValidLimit(limit)) {
-			return getPaginatedFilteredUserList(rangeKey, lastKey, limit, indexName, queryParameter, parameterValue);
+	private List<User> getFilteredUserList(ListParameters listParameters, String indexName, String queryParameter,
+			String parameterValue) {
+		if (listParameters.hasValidLimit()) {
+			return getPaginatedFilteredUserList(listParameters, indexName, queryParameter, parameterValue);
 		}
 		return getNotPaginatedFilteredUserList(indexName, queryParameter, parameterValue);
 	}
 
-	private <T extends Number> List<User> getFilteredUserList(Optional<String> rangeKey, Optional<String> lastKey,
-			Optional<String> limit, String indexName, String queryParameter, T parameterLowValue, T parameterUpValue) {
-		if (Checks.hasValidLimit(limit)) {
-			return getPaginatedFilteredUserList(rangeKey, lastKey, limit, indexName, queryParameter, parameterLowValue,
+	private <T extends Number> List<User> getFilteredUserList(ListParameters listParameters, String indexName,
+			String queryParameter, T parameterLowValue, T parameterUpValue) {
+		if (listParameters.hasValidLimit()) {
+			return getPaginatedFilteredUserList(listParameters, indexName, queryParameter, parameterLowValue,
 					parameterUpValue);
 		}
 		return getNotPaginatedFilteredUserList(indexName, queryParameter, parameterLowValue, parameterUpValue);
@@ -166,8 +173,8 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 
 		Map<String, AttributeValue> expressionAttributeValues = ofEntries(
 				entry(":" + PARTITION_KEY_ALIAS, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
-				entry(":" + SORT_KEY_LOW_ALIAS, new AttributeValue().withN(Utils.getSortKeyValue(sortKeyLowValue))),
-				entry(":" + SORT_KEY_UP_ALIAS, new AttributeValue().withN(Utils.getSortKeyValue(sortKeyUpValue))));
+				entry(":" + SORT_KEY_LOW_ALIAS, new AttributeValue().withN(getSortKeyValue(sortKeyLowValue))),
+				entry(":" + SORT_KEY_UP_ALIAS, new AttributeValue().withN(getSortKeyValue(sortKeyUpValue))));
 
 		String conditionExpression = MessageFormat.format("{0} = :{1} and {2} between :{3} and :{4}", partitionKeyLabel,
 				PARTITION_KEY_ALIAS, sortKeyLabel, SORT_KEY_LOW_ALIAS, SORT_KEY_UP_ALIAS);
@@ -180,52 +187,54 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 				.withExpressionAttributeValues(expressionAttributeValues);
 	}
 
-	private List<User> getPaginatedFilteredUserList(Optional<String> rangeKey, Optional<String> lastKey,
-			Optional<String> limit, String indexName, String sortKeyName, String sortKeyValue) {
+	private String getSortKeyValue(Number sortKeyValue) {
+		return Instant.now().minus(sortKeyValue.longValue(), ChronoUnit.YEARS).toString();
+	}
+
+	private List<User> getPaginatedFilteredUserList(ListParameters listParameters, String indexName, String sortKeyName,
+			String sortKeyValue) {
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
-				sortKeyName, sortKeyValue).withLimit(Utils.getLimit(limit));
-		if (Checks.isValidIndexHashAndRangeKeys(lastKey, rangeKey)) {
+				sortKeyName, sortKeyValue).withLimit(listParameters.getLimit());
+		if (listParameters.isValidIndexHashAndRangeKeys()) {
 			queryExpression = queryExpression
-					.withExclusiveStartKey(getStartKeyWithStringRangeKey(lastKey.get(), rangeKey.get(), sortKeyName));
+					.withExclusiveStartKey(getStartKeyWithStringRangeKey(listParameters, sortKeyName));
 		}
 		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
 	}
 
-	private Map<String, AttributeValue> getStartKeyWithStringRangeKey(String lastKey, String rangeKey,
+	private Map<String, AttributeValue> getStartKeyWithStringRangeKey(ListParameters listParameters,
 			String sortKeyName) {
-		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastKey)),
+		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(listParameters.getHashKey().get())),
 				entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
-				entry(sortKeyName, new AttributeValue().withS(rangeKey)));
+				entry(sortKeyName, new AttributeValue().withS(listParameters.getRangeKey().get())));
 	}
 
-	private <T extends Number> List<User> getPaginatedFilteredUserList(Optional<String> rangeKey,
-			Optional<String> lastKey, Optional<String> limit, String indexName, String sortKeyName, T sortKeyLowValue,
-			T sortKeyUpValue) {
+	private <T extends Number> List<User> getPaginatedFilteredUserList(ListParameters listParameters, String indexName,
+			String sortKeyName, T sortKeyLowValue, T sortKeyUpValue) {
 
-		DynamoDBQueryExpression<User> queryExpression = getExpressionForPaginatedFilteredUserList(rangeKey, lastKey,
-				limit, indexName, sortKeyName, sortKeyLowValue, sortKeyUpValue);
+		DynamoDBQueryExpression<User> queryExpression = getExpressionForPaginatedFilteredUserList(listParameters,
+				indexName, sortKeyName, sortKeyLowValue, sortKeyUpValue);
 		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
 	}
 
 	private <T extends Number> DynamoDBQueryExpression<User> getExpressionForPaginatedFilteredUserList(
-			Optional<String> rangeKey, Optional<String> lastKey, Optional<String> limit, String indexName,
-			String sortKeyName, T sortKeyLowValue, T sortKeyUpValue) {
+			ListParameters listParameters, String indexName, String sortKeyName, T sortKeyLowValue, T sortKeyUpValue) {
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
-				sortKeyName, sortKeyLowValue, sortKeyUpValue).withLimit(Utils.getLimit(limit));
-		if (Checks.isValidIndexHashAndRangeKeys(lastKey, rangeKey)) {
+				sortKeyName, sortKeyLowValue, sortKeyUpValue).withLimit(listParameters.getLimit());
+		if (listParameters.isValidIndexHashAndRangeKeys()) {
 			queryExpression = queryExpression
-					.withExclusiveStartKey(getStartKeyWithNumericRangeKey(lastKey.get(), rangeKey.get(), sortKeyName));
+					.withExclusiveStartKey(getStartKeyWithNumericRangeKey(listParameters, sortKeyName));
 		}
 		return queryExpression;
 	}
 
-	private Map<String, AttributeValue> getStartKeyWithNumericRangeKey(String lastKey, String rangeKey,
+	private Map<String, AttributeValue> getStartKeyWithNumericRangeKey(ListParameters listParameters,
 			String sortKeyName) {
-		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(lastKey)),
+		return ofEntries(entry(TABLE_PARTITION_KEY, new AttributeValue().withS(listParameters.getHashKey().get())),
 				entry(INDEX_PARTITION_KEY, new AttributeValue().withS(INDEX_PARTITION_KEY_VALUE)),
-				entry(sortKeyName, new AttributeValue().withN(rangeKey)));
+				entry(sortKeyName, new AttributeValue().withN(listParameters.getRangeKey().get())));
 	}
 
 	private static Map<String, String> getExpressionAttributeNamesMap(String sortKeyName, String partitionKeyLabel,

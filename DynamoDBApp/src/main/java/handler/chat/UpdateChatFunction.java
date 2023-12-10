@@ -13,7 +13,7 @@ public class UpdateChatFunction extends GenericChatFunction {
 	@Override
 	protected String doAction(APIGatewayProxyRequestEvent requestEvent) {
 		String name = requestEvent.getPathParameters().get(CHAT_KEY);
-		getDynamoDBService().updateChat(name, toEntity(requestEvent.getBody()));
+		getDynamoDBService().updateChat(name, toDto(requestEvent.getBody()));
 		return getJsonResponse("Chat updated: " + name);
 	}
 

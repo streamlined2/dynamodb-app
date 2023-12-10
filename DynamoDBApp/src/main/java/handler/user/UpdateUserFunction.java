@@ -13,7 +13,7 @@ public class UpdateUserFunction extends GenericUserFunction {
 	@Override
 	public String doAction(APIGatewayProxyRequestEvent requestEvent) {
 		String email = requestEvent.getPathParameters().get(EMAIL_KEY);
-		getDynamoDBService().updateUser(email, toEntity(requestEvent.getBody()));
+		getDynamoDBService().updateUser(email, toDto(requestEvent.getBody()));
 		return getJsonResponse("User updated: " + email);
 	}
 }

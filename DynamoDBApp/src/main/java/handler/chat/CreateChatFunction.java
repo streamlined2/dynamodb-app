@@ -3,7 +3,7 @@ package handler.chat;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 
 import handler.StatusCode;
-import layer.model.chat.Chat;
+import layer.model.chat.ChatDto;
 
 public class CreateChatFunction extends GenericChatFunction {
 
@@ -13,9 +13,9 @@ public class CreateChatFunction extends GenericChatFunction {
 
 	@Override
 	protected String doAction(APIGatewayProxyRequestEvent requestEvent) {
-		Chat chat = toEntity(requestEvent.getBody());
-		getDynamoDBService().createChat(chat);
-		return getJsonResponse("Chat created: " + chat.getName());
+		ChatDto chatDto = toDto(requestEvent.getBody());
+		getDynamoDBService().createChat(chatDto);
+		return getJsonResponse("Chat created: " + chatDto.getName());
 	}
 
 }

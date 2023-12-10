@@ -5,6 +5,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+
+import layer.model.Entity;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,7 +17,7 @@ import java.util.Set;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @DynamoDBTable(tableName = "it-marathon-v3-user-db")
-public class User {
+public class User implements Entity<UserDto> {
 
 	@DynamoDBHashKey(attributeName = "email")
 	@EqualsAndHashCode.Include
@@ -48,5 +50,11 @@ public class User {
 
 	@DynamoDBAttribute(attributeName = "social_media")
 	private Set<String> socialMedia;
+
+	public UserDto toDto() {
+		return UserDto.builder().email(getEmail()).country(getCountry()).name(getName()).location(getLocation())
+				.birthday(getBirthday()).registration(getRegistration()).avatar(getAvatar()).about(getAbout())
+				.interests(List.copyOf(getInterests())).socialMedia(Set.copyOf(getSocialMedia())).build();
+	}
 
 }

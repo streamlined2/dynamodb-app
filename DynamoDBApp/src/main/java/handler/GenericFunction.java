@@ -58,7 +58,7 @@ public abstract class GenericFunction<T>
 
 	protected abstract String doAction(APIGatewayProxyRequestEvent requestEvent);
 
-	protected T toEntity(String inputBody) {
+	protected T toDto(String inputBody) {
 		return getGson().fromJson(inputBody, new TypeToken<T>() {
 		});
 	}

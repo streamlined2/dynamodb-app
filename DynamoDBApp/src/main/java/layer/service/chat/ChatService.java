@@ -4,18 +4,18 @@ import java.util.List;
 import java.util.Optional;
 
 import layer.model.ListParameters;
-import layer.model.chat.Chat;
+import layer.model.chat.ChatDto;
 
 public interface ChatService {
 
-	List<Chat> getChatList(ListParameters listParameters);
+	List<ChatDto> getChatList(ListParameters listParameters);
 
-	void createChat(Chat chat);
+	void createChat(ChatDto chat);
 
 	void deleteChat(String name);
 
-	void updateChat(String name, Chat chat);
+	void updateChat(String name, ChatDto chat);
 
-	Optional<Chat> findChat(String name);
+	Optional<ChatDto> findChat(String name);
 
 }

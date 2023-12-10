@@ -4,18 +4,18 @@ import java.util.List;
 import java.util.Optional;
 
 import layer.model.ListParameters;
-import layer.model.chat.Message;
+import layer.model.chat.MessageDto;
 
 public interface MessageService {
 
-	List<Message> getMessageList(ListParameters listParameters);
+	List<MessageDto> getMessageList(ListParameters listParameters);
 
-	void createMessage(Message message);
+	void createMessage(MessageDto message);
 
 	void deleteMessage(String id);
 
-	void updateMessage(String id, Message message);
+	void updateMessage(String id, MessageDto message);
 
-	Optional<Message> findMessage(String id);
+	Optional<MessageDto> findMessage(String id);
 
 }

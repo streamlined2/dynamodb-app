@@ -4,9 +4,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.gson.JsonSyntaxException;
 
+import layer.model.Entity;
 import layer.model.ListParameters;
 import layer.model.user.User;
 import layer.model.user.UserData;
+import layer.model.user.UserDto;
 import layer.service.DynamoDBException;
 import layer.service.GenericDynamoDBServiceImpl;
 import static java.util.Map.ofEntries;
@@ -45,17 +47,17 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	private static final String COUNTRY_BIRTHDAY_INDEX = "country-birthday-index";
 
 	@Override
-	public void createUser(User user) {
-		User existingUser = getDynamoDBMapper().load(User.class, user.getEmail());
+	public void createUser(UserDto userDto) {
+		User existingUser = getDynamoDBMapper().load(User.class, userDto.getEmail());
 		if (existingUser != null) {
-			throw new DynamoDBException(String.format("User with email %s already exists", user.getEmail()));
+			throw new DynamoDBException(String.format("User with email %s already exists", userDto.getEmail()));
 		}
-		checkSocialMedia(user, "User cannot be created: incorrect social media links %s");
-		getDynamoDBMapper().save(user);
+		checkSocialMedia(userDto, "User cannot be created: incorrect social media links %s");
+		getDynamoDBMapper().save(userDto.toEntity());
 	}
 
-	private void checkSocialMedia(User user, String message) {
-		Set<String> incorrectSocialMedia = getIncorrectSocialMedia(user.getSocialMedia());
+	private void checkSocialMedia(UserDto userDto, String message) {
+		Set<String> incorrectSocialMedia = getIncorrectSocialMedia(userDto.getSocialMedia());
 		if (!incorrectSocialMedia.isEmpty()) {
 			throw new DynamoDBException(String.format(message, incorrectSocialMedia.toString()));
 		}
@@ -68,17 +70,18 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	}
 
 	@Override
-	public Optional<User> findUser(String email) {
-		return Optional.ofNullable(getDynamoDBMapper().load(User.class, email));
+	public Optional<UserDto> findUser(String email) {
+		return Optional.ofNullable(getDynamoDBMapper().load(User.class, email)).map(User::toDto);
 	}
 
 	@Override
-	public void updateUser(String email, User user) {
+	public void updateUser(String email, UserDto userDto) {
 		User existingUser = getDynamoDBMapper().load(User.class, email);
 		if (existingUser == null) {
 			throw new DynamoDBException(String.format(USER_WITH_EMAIL_NOT_FOUND, email));
 		}
-		checkSocialMedia(user, "User cannot be updated: incorrect social media links %s");
+		checkSocialMedia(userDto, "User cannot be updated: incorrect social media links %s");
+		User user = userDto.toEntity();
 		user.setEmail(email);
 		getDynamoDBMapper().save(user);
 	}
@@ -93,23 +96,24 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 	}
 
 	@Override
-	public List<User> getUserList(ListParameters listParameters) {
-		return getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, listParameters);
+	public List<UserDto> getUserList(ListParameters listParameters) {
+		return Entity.toDtoList(getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, listParameters));
 	}
 
 	@Override
-	public List<User> getUserListByQuery(ListParameters listParameters, UserData userData) {
+	public List<UserDto> getUserListByQuery(ListParameters listParameters, UserData userData) {
 		try {
 			if (userData.isNameValid()) {
-				return getFilteredUserList(listParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER, userData.getName());
+				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
+						userData.getName()));
 			}
 			if (userData.isLocationValid()) {
-				return getFilteredUserList(listParameters, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
-						userData.getLocation());
+				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_LOCATION_INDEX,
+						LOCATION_BODY_PARAMETER, userData.getLocation()));
 			}
 			if (userData.isAgeValid()) {
-				return getFilteredUserList(listParameters, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
-						userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault());
+				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_BIRTHDAY_INDEX,
+						BIRTHDAY_BODY_PARAMETER, userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault()));
 			}
 			return getUserList(listParameters);
 		} catch (JsonSyntaxException e) {

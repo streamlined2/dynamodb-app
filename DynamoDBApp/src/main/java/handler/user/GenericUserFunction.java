@@ -3,13 +3,13 @@ package handler.user;
 import handler.GenericFunction;
 import handler.StatusCode;
 import layer.model.SortingOrder;
-import layer.model.user.User;
 import layer.model.user.UserData;
+import layer.model.user.UserDto;
 import layer.service.user.DynamoDBUserServiceImpl;
 import layer.service.user.UserService;
 import utils.Utils;
 
-public abstract class GenericUserFunction extends GenericFunction<User> {
+public abstract class GenericUserFunction extends GenericFunction<UserDto> {
 
 	protected static final String EMAIL_KEY = "email";
 	protected static final String USER_WITH_EMAIL_NOT_FOUND_MESSAGE = "User with email %s not found";

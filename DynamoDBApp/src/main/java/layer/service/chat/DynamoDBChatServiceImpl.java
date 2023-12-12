@@ -3,21 +3,20 @@ package layer.service.chat;
 import java.util.List;
 import java.util.Optional;
 
-import layer.model.Entity;
 import layer.model.ListParameters;
 import layer.model.chat.Chat;
 import layer.model.chat.ChatDto;
 import layer.service.DynamoDBException;
 import layer.service.GenericDynamoDBServiceImpl;
 
-public class DynamoDBChatServiceImpl extends GenericDynamoDBServiceImpl<Chat> implements ChatService {
+public class DynamoDBChatServiceImpl extends GenericDynamoDBServiceImpl<Chat, ChatDto> implements ChatService {
 
 	private static final String CHAT_WITH_NAME_NOT_FOUND = "Chat with name %s not found";
 	private static final String TABLE_PARTITION_KEY = "name";
 
 	@Override
 	public List<ChatDto> getChatList(ListParameters listParameters) {
-		return Entity.toDtoList(getNotFilteredEntityList(Chat.class, TABLE_PARTITION_KEY, listParameters));
+		return getNotFilteredEntityList(Chat.class, TABLE_PARTITION_KEY, listParameters);
 	}
 
 	@Override

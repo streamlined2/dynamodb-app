@@ -11,12 +11,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	private static final String APP_DESTINATION_PREFIX = "/app";
-	private static final String ENDPOINT = "/websocket";
+	private static final String ENDPOINT = "/chat";
 	private static final String DESTINATION = "/topic";
 
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		registry.addEndpoint(ENDPOINT);
+		registry.addEndpoint(ENDPOINT).withSockJS();
 	}
 
 	@Override

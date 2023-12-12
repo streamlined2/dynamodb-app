@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> implements UserService {
+public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User, UserDto> implements UserService {
 
 	private static final Set<String> SOCIAL_MEDIA_NAMES = Set.of("linkedin", "telegram", "skype", "instagram",
 			"facebook");
@@ -97,23 +97,22 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 
 	@Override
 	public List<UserDto> getUserList(ListParameters listParameters) {
-		return Entity.toDtoList(getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, listParameters));
+		return getNotFilteredEntityList(User.class, TABLE_PARTITION_KEY, listParameters);
 	}
 
 	@Override
 	public List<UserDto> getUserListByQuery(ListParameters listParameters, UserData userData) {
 		try {
 			if (userData.isNameValid()) {
-				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER,
-						userData.getName()));
+				return getFilteredUserList(listParameters, COUNTRY_NAME_INDEX, NAME_BODY_PARAMETER, userData.getName());
 			}
 			if (userData.isLocationValid()) {
-				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_LOCATION_INDEX,
-						LOCATION_BODY_PARAMETER, userData.getLocation()));
+				return getFilteredUserList(listParameters, COUNTRY_LOCATION_INDEX, LOCATION_BODY_PARAMETER,
+						userData.getLocation());
 			}
 			if (userData.isAgeValid()) {
-				return Entity.toDtoList(getFilteredUserList(listParameters, COUNTRY_BIRTHDAY_INDEX,
-						BIRTHDAY_BODY_PARAMETER, userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault()));
+				return getFilteredUserList(listParameters, COUNTRY_BIRTHDAY_INDEX, BIRTHDAY_BODY_PARAMETER,
+						userData.getMinAgeOrDefault(), userData.getMaxAgeOrDefault());
 			}
 			return getUserList(listParameters);
 		} catch (JsonSyntaxException e) {
@@ -121,7 +120,7 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 		}
 	}
 
-	private List<User> getFilteredUserList(ListParameters listParameters, String indexName, String queryParameter,
+	private List<UserDto> getFilteredUserList(ListParameters listParameters, String indexName, String queryParameter,
 			String parameterValue) {
 		if (listParameters.hasValidLimit()) {
 			return getPaginatedFilteredUserList(listParameters, indexName, queryParameter, parameterValue);
@@ -129,7 +128,7 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 		return getNotPaginatedFilteredUserList(indexName, queryParameter, parameterValue);
 	}
 
-	private <T extends Number> List<User> getFilteredUserList(ListParameters listParameters, String indexName,
+	private <T extends Number> List<UserDto> getFilteredUserList(ListParameters listParameters, String indexName,
 			String queryParameter, T parameterLowValue, T parameterUpValue) {
 		if (listParameters.hasValidLimit()) {
 			return getPaginatedFilteredUserList(listParameters, indexName, queryParameter, parameterLowValue,
@@ -138,10 +137,10 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 		return getNotPaginatedFilteredUserList(indexName, queryParameter, parameterLowValue, parameterUpValue);
 	}
 
-	private List<User> getNotPaginatedFilteredUserList(String indexName, String sortKeyName, String sortKeyValue) {
+	private List<UserDto> getNotPaginatedFilteredUserList(String indexName, String sortKeyName, String sortKeyValue) {
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
 				sortKeyName, sortKeyValue);
-		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
+		return Entity.toDtoList(getDynamoDBMapper().queryPage(User.class, queryExpression).getResults());
 	}
 
 	private DynamoDBQueryExpression<User> getExpressionForNonPaginatedFilteredUserList(String indexName,
@@ -161,12 +160,12 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 				.withExpressionAttributeValues(expressionAttributeValues);
 	}
 
-	private <T extends Number> List<User> getNotPaginatedFilteredUserList(String indexName, String sortKeyName,
+	private <T extends Number> List<UserDto> getNotPaginatedFilteredUserList(String indexName, String sortKeyName,
 			T sortKeyLowValue, T sortKeyUpValue) {
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
 				sortKeyName, sortKeyLowValue, sortKeyUpValue);
-		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
+		return Entity.toDtoList(getDynamoDBMapper().queryPage(User.class, queryExpression).getResults());
 	}
 
 	private <T extends Number> DynamoDBQueryExpression<User> getExpressionForNonPaginatedFilteredUserList(
@@ -195,8 +194,8 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 		return Instant.now().minus(sortKeyValue.longValue(), ChronoUnit.YEARS).toString();
 	}
 
-	private List<User> getPaginatedFilteredUserList(ListParameters listParameters, String indexName, String sortKeyName,
-			String sortKeyValue) {
+	private List<UserDto> getPaginatedFilteredUserList(ListParameters listParameters, String indexName,
+			String sortKeyName, String sortKeyValue) {
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForNonPaginatedFilteredUserList(indexName,
 				sortKeyName, sortKeyValue).withLimit(listParameters.getLimit());
@@ -204,7 +203,7 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 			queryExpression = queryExpression
 					.withExclusiveStartKey(getStartKeyWithStringRangeKey(listParameters, sortKeyName));
 		}
-		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
+		return Entity.toDtoList(getDynamoDBMapper().queryPage(User.class, queryExpression).getResults());
 	}
 
 	private Map<String, AttributeValue> getStartKeyWithStringRangeKey(ListParameters listParameters,
@@ -214,12 +213,12 @@ public class DynamoDBUserServiceImpl extends GenericDynamoDBServiceImpl<User> im
 				entry(sortKeyName, new AttributeValue().withS(listParameters.getRangeKey().get())));
 	}
 
-	private <T extends Number> List<User> getPaginatedFilteredUserList(ListParameters listParameters, String indexName,
-			String sortKeyName, T sortKeyLowValue, T sortKeyUpValue) {
+	private <T extends Number> List<UserDto> getPaginatedFilteredUserList(ListParameters listParameters,
+			String indexName, String sortKeyName, T sortKeyLowValue, T sortKeyUpValue) {
 
 		DynamoDBQueryExpression<User> queryExpression = getExpressionForPaginatedFilteredUserList(listParameters,
 				indexName, sortKeyName, sortKeyLowValue, sortKeyUpValue);
-		return getDynamoDBMapper().queryPage(User.class, queryExpression).getResults();
+		return Entity.toDtoList(getDynamoDBMapper().queryPage(User.class, queryExpression).getResults());
 	}
 
 	private <T extends Number> DynamoDBQueryExpression<User> getExpressionForPaginatedFilteredUserList(

@@ -8,9 +8,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
+import layer.model.Dto;
+import layer.model.Entity;
 import layer.model.ListParameters;
 
-public abstract class GenericDynamoDBServiceImpl<T> {
+public abstract class GenericDynamoDBServiceImpl<E extends Entity<D>, D extends Dto<E>> {
 
 	protected DynamoDBMapper getDynamoDBMapper() {
 		return DynamoDBMapperHelper.INSTANCE;
@@ -24,7 +26,7 @@ public abstract class GenericDynamoDBServiceImpl<T> {
 		private static final DynamoDBMapper INSTANCE;
 	}
 
-	protected List<T> getNotFilteredEntityList(Class<T> entityClass, String partitionKey,
+	protected List<D> getNotFilteredEntityList(Class<E> entityClass, String partitionKey,
 			ListParameters listParameters) {
 		if (listParameters.hasValidLimit()) {
 			return getPaginatedNotFilteredEntityList(entityClass, partitionKey, listParameters);
@@ -32,7 +34,7 @@ public abstract class GenericDynamoDBServiceImpl<T> {
 		return getNotPaginatedNotFilteredEntityList(entityClass);
 	}
 
-	protected List<T> getPaginatedNotFilteredEntityList(Class<T> entityClass, String partitionKey,
+	protected List<D> getPaginatedNotFilteredEntityList(Class<E> entityClass, String partitionKey,
 			ListParameters listParameters) {
 		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression().withConsistentRead(false)
 				.withLimit(listParameters.getLimit());
@@ -40,11 +42,11 @@ public abstract class GenericDynamoDBServiceImpl<T> {
 			scanExpression = scanExpression.withExclusiveStartKey(
 					Map.of(partitionKey, new AttributeValue().withS(listParameters.getHashKey().get())));
 		}
-		return getDynamoDBMapper().scanPage(entityClass, scanExpression).getResults();
+		return Entity.toDtoList(getDynamoDBMapper().scanPage(entityClass, scanExpression).getResults());
 	}
 
-	protected List<T> getNotPaginatedNotFilteredEntityList(Class<T> entityClass) {
-		return getDynamoDBMapper().scan(entityClass, new DynamoDBScanExpression());
+	protected List<D> getNotPaginatedNotFilteredEntityList(Class<E> entityClass) {
+		return Entity.toDtoList(getDynamoDBMapper().scan(entityClass, new DynamoDBScanExpression()));
 	}
 
 }

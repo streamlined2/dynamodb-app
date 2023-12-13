@@ -20,7 +20,7 @@ public class ListParameters {
 		return hashKey.map(this::isNotBlank).orElse(false);
 	}
 
-	public boolean isValidIndexHashAndRangeKeys() {
+	public boolean hasValidIndexHashAndRangeKeys() {
 		return isValidKey(hashKey) && isValidKey(rangeKey);
 	}
 

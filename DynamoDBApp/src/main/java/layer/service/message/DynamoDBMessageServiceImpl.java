@@ -3,6 +3,8 @@ package layer.service.message;
 import java.util.List;
 import java.util.Optional;
 
+import layer.model.AbstractResultList;
+import layer.model.Entity;
 import layer.model.ListParameters;
 import layer.model.chat.Message;
 import layer.model.chat.MessageDto;
@@ -13,11 +15,11 @@ public class DynamoDBMessageServiceImpl extends GenericDynamoDBServiceImpl<Messa
 		implements MessageService {
 
 	private static final String MESSAGE_WITH_ID_NOT_FOUND = "Message with id %s not found";
-	private static final String TABLE_PARTITION_KEY = "id";
 
 	@Override
 	public List<MessageDto> getMessageList(ListParameters listParameters) {
-		return getNotFilteredEntityList(Message.class, TABLE_PARTITION_KEY, listParameters);
+		return Entity.toDtoList(AbstractResultList.getNonFilteredResultList(getDynamoDBMapper(), Message.class,
+				listParameters, Message.TABLE_PARTITION_KEY).fetchList());
 	}
 
 	@Override

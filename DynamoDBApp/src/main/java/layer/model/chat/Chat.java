@@ -20,6 +20,8 @@ import lombok.EqualsAndHashCode;
 @DynamoDBTable(tableName = "it-marathon-v3-chat-db")
 public class Chat implements Entity<ChatDto> {
 
+	public static final String TABLE_PARTITION_KEY = "name";
+
 	@DynamoDBHashKey(attributeName = "name")
 	@EqualsAndHashCode.Include
 	private String name;

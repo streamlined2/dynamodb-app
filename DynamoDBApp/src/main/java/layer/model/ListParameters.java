@@ -16,8 +16,8 @@ public class ListParameters {
 	private Optional<String> hashKey;
 	private Optional<String> rangeKey;
 
-	public boolean isValidTableLastHashKey() {
-		return hashKey.map(this::isNotBlank).orElse(false);
+	public boolean hasValidTableLastHashKey() {
+		return isValidKey(hashKey);
 	}
 
 	public boolean hasValidIndexHashAndRangeKeys() {
@@ -25,19 +25,11 @@ public class ListParameters {
 	}
 
 	private boolean isValidKey(Optional<String> key) {
-		return key.map(this::isNotBlank).orElse(false);
-	}
-
-	private boolean isNotBlank(String key) {
-		return !key.isBlank();
+		return key.map(k -> !k.isBlank()).orElse(false);
 	}
 
 	public boolean hasValidLimit() {
-		return limit.flatMap(Utils::getIntegerValue).map(this::isValidLimit).orElse(false);
-	}
-
-	private boolean isValidLimit(Integer limit) {
-		return limit.intValue() > 0;
+		return limit.flatMap(Utils::getIntegerValue).map(l -> l.intValue() > 0).orElse(false);
 	}
 
 	public Integer getLimit() {
